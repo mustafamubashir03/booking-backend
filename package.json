@@ -1,0 +1,13 @@
+{
+  "name": "booking-backend",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "hotel-service",
+    "booking-service"
+  ],
+  "scripts": {
+    "dev:hotel": "npm run dev --workspace=hotel-service",
+    "dev:booking": "npm run dev --workspace=booking-service"
+  }
+}
