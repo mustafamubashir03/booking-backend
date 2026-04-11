@@ -16,7 +16,7 @@ export const validateRequestBody = (schema: AnyZodObject) => {
             logger.info("Request body is valid");
             next();
 
-        } catch (error) {
+        } catch (error) { 
             // If the validation fails, 
             logger.error("Request body is invalid");
             res.status(400).json({
