@@ -15,8 +15,7 @@ app.use(express.json());
 
 app.use(attachCorrelationIdMiddleware);
 app.use('/api/v1', v1Router);
-app.use('/api/v2', v2Router); 
-
+app.use('/api/v2', v2Router);
 
 /**
  * Add the error handler middleware
@@ -25,8 +24,7 @@ app.use('/api/v2', v2Router);
 app.use(appErrorHandler);
 app.use(genericErrorHandler);
 
-
 app.listen(serverConfig.PORT, () => {
-    logger.info(`Server is running on http://localhost:${serverConfig.PORT}`);
-    logger.info(`Press Ctrl+C to stop the server.`);
+  logger.info(`Server is running on http://localhost:${serverConfig.PORT}`);
+  logger.info(`Press Ctrl+C to stop the server.`);
 });

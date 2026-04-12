@@ -1,7 +1,7 @@
-require("ts-node/register")
+require('ts-node/register');
 
-const rawConfig = require("./db.config")
+const rawConfig = require('./db.config');
 
-const config = rawConfig.default || rawConfig
+const config = rawConfig.default || rawConfig;
 
-module.exports = config
+module.exports = config;

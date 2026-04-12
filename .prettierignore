@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+coverage
+*.log
+
+# Ignore specific microservice artifacts if needed
+# apps/**/dist
+# packages/**/lib

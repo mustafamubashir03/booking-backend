@@ -8,6 +8,11 @@
   ],
   "scripts": {
     "dev:hotel": "npm run dev --workspace=hotel-service",
-    "dev:booking": "npm run dev --workspace=booking-service"
+    "dev:booking": "npm run dev --workspace=booking-service",
+    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md}\""
+  },
+  "devDependencies": {
+    "prettier": "3.8.2"
   }
 }
