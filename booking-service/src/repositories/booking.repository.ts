@@ -1,5 +1,7 @@
-import { Prisma } from '../../prisma/generated/prisma/client';
+import { IdempotencyKey, Prisma } from '../../prisma/generated/prisma/client';
+import { validate as isValidUuid } from 'uuid';
 import { prisma } from '../lib/prisma';
+import { BadRequestError, NotFoundError } from '../utils/errors/app.error';
 
 export async function createBooking(bookingInput: Prisma.BookingCreateInput) {
   const bookingCreated = prisma.booking.create({
@@ -22,12 +24,15 @@ export async function createIdempotentKey(key: string, bookingId: number) {
   return idempotencyKeyCreated;
 }
 
-export async function getIdempotentKey(key: string) {
-  const idempotencyKey = await prisma.idempotencyKey.findUnique({
-    where: {
-      key,
-    },
-  });
+export async function getIdempotentKeyWithLock(tx: Prisma.TransactionClient,key: string) {
+  if (!isValidUuid(key)) {
+    throw new BadRequestError('Key is not a valid uuid');
+  }
+  const idempotencyKey =
+    await tx.$queryRaw<IdempotencyKey>`SELECT * FROM "IdempotencyKey" WHERE "key" = ${key} FOR UPDATE`;
+  if (!idempotencyKey || idempotencyKey.key.length === 0) {
+    throw new NotFoundError('Idempotency key not found');
+  }
   return idempotencyKey;
 }
 
@@ -40,8 +45,8 @@ export async function getBookingById(bookingId: number) {
   return booking;
 }
 
-export async function confirmBooking(bookingId: number) {
-  const bookingConfirmed = await prisma.booking.update({
+export async function confirmBooking(tx:Prisma.TransactionClient,bookingId: number) {
+  const bookingConfirmed = await tx.booking.update({
     where: {
       id: bookingId,
     },
@@ -63,8 +68,8 @@ export async function cancelBooking(bookingId: number) {
   return bookingConfirmed;
 }
 
-export async function finalizeIdempotentKey(key: string) {
-  const idempotencyKeyFinalized = await prisma.idempotencyKey.update({
+export async function finalizeIdempotentKey(tx:Prisma.TransactionClient,key: string) {
+  const idempotencyKeyFinalized = await tx.idempotencyKey.update({
     where: {
       key,
     },
