@@ -24,13 +24,14 @@ export async function createIdempotentKey(key: string, bookingId: number) {
   return idempotencyKeyCreated;
 }
 
-export async function getIdempotentKeyWithLock(tx: Prisma.TransactionClient,key: string) {
+export async function getIdempotentKeyWithLock(tx: Prisma.TransactionClient, key: string) {
   if (!isValidUuid(key)) {
     throw new BadRequestError('Key is not a valid uuid');
   }
-  const idempotencyKey =
-    await tx.$queryRaw<IdempotencyKey[]>`SELECT * FROM \`IdempotencyKey\` WHERE \`key\`=${key} FOR UPDATE`;
-  console.log("idempotencyKeyAtLockFunction",idempotencyKey)
+  const idempotencyKey = await tx.$queryRaw<
+    IdempotencyKey[]
+  >`SELECT * FROM \`IdempotencyKey\` WHERE \`key\`=${key} FOR UPDATE`;
+  console.log('idempotencyKeyAtLockFunction', idempotencyKey);
   if (!idempotencyKey) {
     throw new NotFoundError('Idempotency key not found');
   }
@@ -46,7 +47,7 @@ export async function getBookingById(bookingId: number) {
   return booking;
 }
 
-export async function confirmBooking(tx:Prisma.TransactionClient,bookingId: number) {
+export async function confirmBooking(tx: Prisma.TransactionClient, bookingId: number) {
   if (!bookingId) {
     throw new BadRequestError('bookingId is required to confirm a booking');
   }
@@ -72,7 +73,7 @@ export async function cancelBooking(bookingId: number) {
   return bookingConfirmed;
 }
 
-export async function finalizeIdempotentKey(tx:Prisma.TransactionClient,key: string) {
+export async function finalizeIdempotentKey(tx: Prisma.TransactionClient, key: string) {
   const idempotencyKeyFinalized = await tx.idempotencyKey.update({
     where: {
       key,
