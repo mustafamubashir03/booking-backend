@@ -33,7 +33,8 @@ export async function createBookingService({
 export async function confirmBookingService(idempotencyKey: string) {
   return await prisma.$transaction(async (tx) => {
     const idempotentKey = await getIdempotentKeyWithLock(tx,idempotencyKey);
-    if (!idempotentKey) {
+    console.log("idempotentKey at confirmBooking Service Transaction",idempotentKey)
+    if (!idempotentKey?.key) {
       throw new NotFoundError('Idempotency key not found');
     }
     if (idempotentKey.finalize) {
