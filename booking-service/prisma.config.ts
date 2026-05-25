@@ -2,19 +2,19 @@
 // npm install --save-dev prisma dotenv
 import 'dotenv/config';
 import { defineConfig } from 'prisma/config';
-const dbUser = process.env.DATABASE_USER
-const dbPass = process.env.DATABASE_PASSWORD
-const dbHost = process.env.DATABASE_HOST
-const dbPort = process.env.DATABASE_PORT
-const dbName = process.env.DATABASE_NAME
+const dbUser = process.env.DATABASE_USER;
+const dbPass = process.env.DATABASE_PASSWORD;
+const dbHost = process.env.DATABASE_HOST;
+const dbPort = process.env.DATABASE_PORT;
+const dbName = process.env.DATABASE_NAME;
 
-const connectionUrl = `mysql://${dbUser}:${dbPass}@${dbHost}:${dbPort}/${dbName}`
+const connectionUrl = `mysql://${dbUser}:${dbPass}@${dbHost}:${dbPort}/${dbName}`;
 export default defineConfig({
-  schema: "src/prisma/schema",
+  schema: 'src/prisma/schema',
   migrations: {
-    path: "src/prisma/migrations",
+    path: 'src/prisma/migrations',
   },
   datasource: {
-    url: connectionUrl
+    url: connectionUrl,
   },
 });

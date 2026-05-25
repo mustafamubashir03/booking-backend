@@ -4,11 +4,13 @@
   "private": true,
   "workspaces": [
     "hotel-service",
-    "booking-service"
+    "booking-service",
+    "notification-service"
   ],
   "scripts": {
     "dev:hotel": "npm run dev --workspace=hotel-service",
     "dev:booking": "npm run dev --workspace=booking-service",
+    "dev:notification": "npm run dev --workspace=notification-service",
     "format": "prettier --write \"**/*.{ts,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,js,json,md}\""
   },
