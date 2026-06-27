@@ -1,7 +1,9 @@
+
 import logger from '../config/logger.config';
 import Hotel from '../db/models/hotel';
 import { createHotelDTO, updateHotelDTO } from '../dto/hotel.dto';
 import { NotFoundError } from '../utils/errors/app.error';
+import { BaseRepository } from './base.repository';
 
 export async function createHotel(hotelData: createHotelDTO) {
   try {
@@ -66,5 +68,20 @@ export async function updateHotelById(id: number, hotelData: updateHotelDTO) {
     return hotel;
   } catch {
     logger.error('Failed to get hotels');
+  }
+}
+
+
+export class HotelRepository extends BaseRepository<Hotel> {
+  constructor() {
+    super(Hotel)
+  }
+  async findAll(): Promise<Hotel[]> {
+    const hotels = await this.model.findAll({ where: { deletedAt: null } })
+    if (!hotels) {
+      return []
+    }
+    return hotels
+
   }
 }
