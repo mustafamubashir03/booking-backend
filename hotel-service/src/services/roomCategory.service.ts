@@ -1,13 +1,24 @@
 import { createRoomCategoryDTO, updateRoomCategoryDTO } from "../dto/roomCategory.dto";
 import { RoomCategoryRepository } from "../repositories/roomCategory.repository";
+import { NotFoundError } from "../utils/errors/app.error";
+import { hotelRepository } from "./hotel.service";
 
 
-const roomCategoryRepository = new RoomCategoryRepository()
+export const roomCategoryRepository = new RoomCategoryRepository()
 
 
 export const getRoomCategoryService = async () => {
     const roomCategories = await roomCategoryRepository.findAll()
     return roomCategories
+}
+export const getAllRoomCategoriesByHotelService = async (id: number) => {
+    const hotel = await hotelRepository.findById(id)
+    if (!hotel) {
+        throw new NotFoundError("hotel not found")
+    }
+    const roomCategories = await roomCategoryRepository.findAllByHotelId(id)
+    return roomCategories
+
 }
 export const createRoomCategoryService = async (roomCategoryData: createRoomCategoryDTO) => {
     const roomCategory = await roomCategoryRepository.create(roomCategoryData)

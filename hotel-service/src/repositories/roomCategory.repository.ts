@@ -16,6 +16,18 @@ export class RoomCategoryRepository extends BaseRepository<RoomCategory> {
         }
         return roomCategories
     }
+    async findAllByHotelId(hotelId: number) {
+        const roomCategories = await this.model.findAll({
+            where: {
+                hotelId: hotelId,
+                deletedAt: null
+            }
+        })
+        if (!roomCategories) {
+            throw new Error("no room categories found")
+        }
+        return roomCategories
+    }
     async softDelete(id: number): Promise<RoomCategory | null> {
         const roomCategory = await this.model.findByPk(id)
         if (!roomCategory) {
