@@ -1,6 +1,7 @@
 package app
 
 import (
+	"auth-go/router"
 	"fmt"
 	"net/http"
 	"time"
@@ -13,10 +14,24 @@ type Application struct {
 	Config Config
 }
 
+func NewConfig(addr string) Config {
+	config := Config{
+		Addr: addr,
+	}
+	return config
+}
+
+func NewApp(config Config) Application {
+	app := Application{
+		Config: config,
+	}
+	return app
+}
+
 func (app *Application) Run() error {
 	server := &http.Server{
 		Addr:         app.Config.Addr,
-		Handler:      nil,
+		Handler:      router.SetupRouter(),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
