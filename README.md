@@ -21,6 +21,9 @@ The repository is organized as a monorepo utilizing npm workspaces to manage dep
 
 ## Core Architectural Concepts & Engineering Decisions
 
+### Dependency Injection via `storage.go` (auth-go)
+The `auth-go` service includes a dedicated `storage.go` file whose sole responsibility is the construction and ownership of database client objects (e.g., `*gorm.DB` or `*sql.DB`). Rather than allowing the service layer to instantiate its own database connections, `storage.go` acts as a centralized factory — it creates the required DB objects and **injects them into the service layer** as dependencies. This keeps the service layer focused purely on business logic, makes it trivially testable (any compatible implementation can be injected), and ensures that the lifecycle of database connections is managed in one place rather than scattered across multiple layers.
+
 ### Idempotency
 To prevent unintended duplicate operations, specifically in scenarios where network instability might cause a client to retry a booking confirmation, the system implements idempotency keys.
 **Approach:** During the initial creation of a booking, the service generates a unique idempotency key. This key is stored in MySQL within a dedicated `IdempotencyKey` table and linked via a relation to the newly created booking record. When a client subsequently requests to confirm the booking, they must provide this key. The system verifies the state of the key in the database. If the key indicates that the operation has already been finalized, the system rejects the duplicate request. This guarantees that critical state changes occur exactly once.
