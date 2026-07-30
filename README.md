@@ -21,8 +21,10 @@ The repository is organized as a monorepo utilizing npm workspaces to manage dep
 
 ## Core Architectural Concepts & Engineering Decisions
 
-### Dependency Injection via `storage.go` (auth-go)
-The `auth-go` service includes a dedicated `storage.go` file whose sole responsibility is the construction and ownership of database client objects (e.g., `*gorm.DB` or `*sql.DB`). Rather than allowing the service layer to instantiate its own database connections, `storage.go` acts as a centralized factory — it creates the required DB objects and **injects them into the service layer** as dependencies. This keeps the service layer focused purely on business logic, makes it trivially testable (any compatible implementation can be injected), and ensures that the lifecycle of database connections is managed in one place rather than scattered across multiple layers.
+### Dependency Injection (auth-go)
+The `auth-go` service is gracefully designed using the Dependency Injection pattern. Specifically, only the application's `Run()` function is responsible for creating and wiring objects together. The individual layers (e.g., controllers, services, repositories) are deliberately not responsible for instantiating their own dependencies within their constructors. Furthermore, no struct is tightly coupled to concrete dependent structs; instead, they depend entirely at the Interface level. 
+
+Additionally, the service includes a dedicated `storage.go` file whose sole responsibility is the construction and ownership of database client objects (e.g., `*gorm.DB` or `*sql.DB`). Rather than allowing the service layer to instantiate its own database connections, `storage.go` acts as a centralized factory — it creates the required DB objects and **injects them into the service layer** as dependencies. This keeps the service layer focused purely on business logic, makes it trivially testable (any compatible implementation can be injected), and ensures that the lifecycle of database connections is managed in one place rather than scattered across multiple layers.
 
 ### Idempotency
 To prevent unintended duplicate operations, specifically in scenarios where network instability might cause a client to retry a booking confirmation, the system implements idempotency keys.
