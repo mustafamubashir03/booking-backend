@@ -1,6 +1,7 @@
 import { CreationAttributes, Model, ModelStatic, WhereOptions } from "sequelize";
 
-export class BaseRepository<T extends Model> {
+
+export abstract class BaseRepository<T extends Model> {
     protected model: ModelStatic<T>
 
     constructor(model: ModelStatic<T>) {
@@ -29,7 +30,7 @@ export class BaseRepository<T extends Model> {
             }
         })
         if (!record) {
-            throw new Error("Record not found")
+            throw new Error("record not found")
         }
 
         return;

@@ -8,7 +8,7 @@ import {
 import sequelize from './sequelize';
 
 
-enum RoomType {
+export enum RoomType {
     SINGLE = 'SINGLE',
     DOUBLE = 'DOUBLE',
     TRIPLE = 'TRIPLE',
@@ -58,7 +58,7 @@ RoomCategory.init(
     },
     {
         sequelize: sequelize,
-        tableName: 'roomCategory',
+        tableName: 'roomCategories',
         underscored: true,
         timestamps: true,
     },

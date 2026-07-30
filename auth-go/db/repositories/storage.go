@@ -5,8 +5,8 @@ type Storage struct {
 }
 
 func NewStorage() *Storage {
-	storage := Storage{
+	storage := &Storage{
 		UserRepository: &UserRepositoryImp{},
 	}
-	return &storage
+	return storage
 }
