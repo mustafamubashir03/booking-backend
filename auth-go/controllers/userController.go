@@ -18,8 +18,26 @@ func NewUserController(_userService services.UserService) *UserController {
 
 }
 
-func (u *UserController) RegisterUser(w http.ResponseWriter, r *http.Request) {
+func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("user controller hit")
 	u.userService.CreateUser()
-	w.Write([]byte("register successful"))
+	w.Write([]byte("created user successful"))
+}
+
+func (u *UserController) GetUserById(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("user controller hit")
+	u.userService.GetUserById()
+	w.Write([]byte("got user successful"))
+}
+
+func (u *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("user controller hit")
+	u.userService.GetAllUsers()
+	w.Write([]byte("got all users successful"))
+}
+
+func (u *UserController) DeleteById(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("user controller hit")
+	u.userService.DeleteUserById()
+	w.Write([]byte("deleted user successful"))
 }

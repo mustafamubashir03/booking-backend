@@ -2,10 +2,12 @@ package app
 
 import (
 	"auth-go/controllers"
-	db "auth-go/db/repositories"
+	dbConfig "auth-go/db"
+	dbRepository "auth-go/db/repositories"
 	"auth-go/router"
 	"auth-go/services"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 )
@@ -15,7 +17,7 @@ type Config struct {
 }
 type Application struct {
 	Config Config
-	Store  db.Storage
+	Store  dbRepository.Storage
 }
 
 func NewConfig(addr string) Config {
@@ -28,13 +30,17 @@ func NewConfig(addr string) Config {
 func NewApp(config Config) Application {
 	app := Application{
 		Config: config,
-		Store:  *db.NewStorage(),
+		Store:  *dbRepository.NewStorage(),
 	}
 	return app
 }
 
 func (app *Application) Run() error {
-	userDb := db.NewUserRepository()
+	db, error := dbConfig.SetupDB()
+	if error != nil {
+		log.Fatalf("Error setting up database: %v", error)
+	}
+	userDb := dbRepository.NewUserRepository(db)
 	userService := services.NewUserService(userDb)
 	userController := controllers.NewUserController(userService)
 	userRouter := router.NewUserRouter(userController)
