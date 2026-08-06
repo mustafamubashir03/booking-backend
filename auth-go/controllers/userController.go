@@ -20,7 +20,7 @@ func NewUserController(_userService services.UserService) *UserController {
 
 func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("user controller hit")
-	u.userService.CreateUser()
+	u.userService.CreateUser("shubham", "[EMAIL_ADDRESS]", "123456")
 	w.Write([]byte("created user successful"))
 }
 
@@ -40,4 +40,11 @@ func (u *UserController) DeleteById(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("user controller hit")
 	u.userService.DeleteUserById()
 	w.Write([]byte("deleted user successful"))
+}
+func (u *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("user controller hit")
+	email := "[EMAIL_ADDRESS]"
+	password := "123456"
+	jwtToken := u.userService.LoginUser(email, password)
+	w.Write([]byte(jwtToken))
 }

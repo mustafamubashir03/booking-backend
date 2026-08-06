@@ -2,14 +2,17 @@ package services
 
 import (
 	db "auth-go/db/repositories"
-	"fmt"
+	"auth-go/utils"
+
+	"log"
 )
 
 type UserService interface {
-	CreateUser()
+	CreateUser(name string, email string, password string) error
 	GetUserById()
 	GetAllUsers()
 	DeleteUserById()
+	LoginUser(email string, password string) string
 }
 
 type UserServiceImp struct {
@@ -23,23 +26,37 @@ func NewUserService(_userRepository db.UserRepository) UserService {
 	return userService
 }
 
-func (u *UserServiceImp) CreateUser() {
-	fmt.Println("user service hit")
-	u.userRepository.Create()
-
+func (u *UserServiceImp) CreateUser(name string, email string, password string) error {
+	hashedPassword, err := utils.CreateHashPassword(password)
+	if err != nil {
+		log.Fatal("error in creating hash password")
+	}
+	u.userRepository.Create(name, email, string(hashedPassword))
+	return nil
 }
 
 func (u *UserServiceImp) GetUserById() {
-	fmt.Println("getting user by id hit")
 	u.userRepository.GetById()
 }
 
 func (u *UserServiceImp) GetAllUsers() {
-	fmt.Println("getting all users hit")
 	u.userRepository.GetAll()
 }
 
 func (u *UserServiceImp) DeleteUserById() {
-	fmt.Println("deleting user by id hit")
 	u.userRepository.DeleteById()
+}
+
+func (u *UserServiceImp) LoginUser(email string, password string) string {
+	userFound, err := u.userRepository.GetByEmail(email)
+	if err != nil {
+		log.Fatal("error in getting user by email")
+	}
+	isMatch := utils.CompareHashedPassword([]byte(userFound.Password), password)
+	if !isMatch {
+		log.Fatal("password does not match")
+	}
+	jwtToken := utils.GenerateJWT(userFound.Username)
+	return jwtToken
+
 }

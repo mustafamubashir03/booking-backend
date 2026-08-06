@@ -8,8 +8,9 @@ import (
 )
 
 type UserRepository interface {
-	Create() error
+	Create(name string, email string, hashedPassword string) error
 	GetById() (*models.User, error)
+	GetByEmail(email string) (*models.User, error)
 	GetAll() ([]models.User, error)
 	DeleteById() error
 }
@@ -25,10 +26,10 @@ func NewUserRepository(_db *sql.DB) UserRepository {
 	return userRepository
 
 }
-func (userRepo *UserRepositoryImp) Create() error {
+func (userRepo *UserRepositoryImp) Create(name string, email string, hashedPassword string) error {
 	fmt.Println("user repository hit")
 	query := "INSERT INTO users(username, email, password) VALUES (?,?,?)"
-	result, err := userRepo.db.Exec(query, "test", "test@gmail.com", "password")
+	result, err := userRepo.db.Exec(query, name, email, hashedPassword)
 	if err != nil {
 		log.Fatalf("Error executing query: %v", err)
 	}
@@ -59,7 +60,23 @@ func (userRepo *UserRepositoryImp) GetById() (*models.User, error) {
 		log.Fatalf("Error scanning database: %v", err)
 	}
 	fmt.Println("User fetched", user)
-	return nil, err
+	return user, err
+}
+func (userRepo *UserRepositoryImp) GetByEmail(email string) (*models.User, error) {
+	fmt.Println("getting user by email hit")
+	query := "SELECT id, username, email, password, created_at, updated_at FROM users WHERE email = ?"
+	row := userRepo.db.QueryRow(query, email)
+	user := &models.User{}
+	err := row.Scan(&user.Id, &user.Username, &user.Email, &user.Password, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("No rows found")
+			return nil, err
+		}
+		log.Fatalf("Error scanning database: %v", err)
+	}
+	fmt.Println("User fetched", user)
+	return user, err
 }
 
 func (userRepo *UserRepositoryImp) GetAll() ([]models.User, error) {
@@ -83,8 +100,7 @@ func (userRepo *UserRepositoryImp) GetAll() ([]models.User, error) {
 		users = append(users, *user)
 	}
 	fmt.Println("User fetched", users)
-	return nil, err
-
+	return users, err
 }
 
 func (userRepo *UserRepositoryImp) DeleteById() error {
