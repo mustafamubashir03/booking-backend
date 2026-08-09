@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"auth-go/dto"
 	"auth-go/services"
+	"auth-go/utils"
 	"fmt"
 	"net/http"
 )
@@ -20,7 +22,7 @@ func NewUserController(_userService services.UserService) *UserController {
 
 func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("user controller hit")
-	u.userService.CreateUser("shubham", "[EMAIL_ADDRESS]", "123456")
+	u.userService.CreateUser("Mustafa", "mustafamubashir87@gmail.com", "12345")
 	w.Write([]byte("created user successful"))
 }
 
@@ -42,9 +44,29 @@ func (u *UserController) DeleteById(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("deleted user successful"))
 }
 func (u *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
+	var payload dto.LoginUserRequestDTO
+	if jsonErr := utils.ReadJsonBody(r, &payload); jsonErr != nil {
+		err := utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON parse error.", jsonErr)
+		if err != nil {
+			utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON write failed.", err)
+		}
+		return
+	}
+
+	fmt.Printf("[PARSED PAYLOAD] Email: %q | Password: %q\n", payload.Email, payload.Password)
+
+	if validationErr := utils.Validate.Struct(payload); validationErr != nil {
+		err := utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Validation failed.", validationErr)
+		if err != nil {
+			utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON write failed.", err)
+		}
+		return
+	}
 	fmt.Println("user controller hit")
-	email := "[EMAIL_ADDRESS]"
-	password := "123456"
-	jwtToken := u.userService.LoginUser(email, password)
-	w.Write([]byte(jwtToken))
+	jwtToken, err := u.userService.LoginUser(&payload)
+	if err != nil {
+		fmt.Println(err)
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON write failed.", err)
+	}
+	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User logged in successfully.", jwtToken)
 }

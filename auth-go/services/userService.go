@@ -2,8 +2,9 @@ package services
 
 import (
 	db "auth-go/db/repositories"
+	"auth-go/dto"
 	"auth-go/utils"
-
+	"fmt"
 	"log"
 )
 
@@ -12,7 +13,7 @@ type UserService interface {
 	GetUserById()
 	GetAllUsers()
 	DeleteUserById()
-	LoginUser(email string, password string) string
+	LoginUser(payload *dto.LoginUserRequestDTO) (string, error)
 }
 
 type UserServiceImp struct {
@@ -47,16 +48,19 @@ func (u *UserServiceImp) DeleteUserById() {
 	u.userRepository.DeleteById()
 }
 
-func (u *UserServiceImp) LoginUser(email string, password string) string {
-	userFound, err := u.userRepository.GetByEmail(email)
+func (u *UserServiceImp) LoginUser(payload *dto.LoginUserRequestDTO) (string, error) {
+	userFound, err := u.userRepository.GetByEmail(payload.Email)
 	if err != nil {
-		log.Fatal("error in getting user by email")
+		return "", err
 	}
-	isMatch := utils.CompareHashedPassword([]byte(userFound.Password), password)
+	isMatch := utils.CompareHashedPassword([]byte(userFound.Password), payload.Password)
 	if !isMatch {
-		log.Fatal("password does not match")
+		return "", fmt.Errorf("password does not match")
 	}
-	jwtToken := utils.GenerateJWT(userFound.Username)
-	return jwtToken
+	jwtToken, err := utils.GenerateJWT(userFound.Email, string(userFound.Id))
+	if err != nil {
+		return "", err
+	}
+	return jwtToken, nil
 
 }
