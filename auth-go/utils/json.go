@@ -28,3 +28,23 @@ func ReadJsonBody(r *http.Request, result any) error {
 	decoder.DisallowUnknownFields()
 	return decoder.Decode(result)
 }
+
+func WriteJsonSuccessResponse(w http.ResponseWriter, status int, message string, data any) error {
+	response := map[string]any{
+		"message": message,
+		"data":    data,
+		"success": true,
+		"error":   nil,
+	}
+	return WriteJsonResponse(w, status, response)
+}
+
+func WriteJsonErrorResponse(w http.ResponseWriter, status int, message string, err error) error {
+	response := map[string]any{
+		"message": message,
+		"data":    nil,
+		"success": false,
+		"error":   err.Error(),
+	}
+	return WriteJsonResponse(w, status, response)
+}

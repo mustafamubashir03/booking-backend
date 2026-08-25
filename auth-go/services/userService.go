@@ -3,6 +3,7 @@ package services
 import (
 	db "auth-go/db/repositories"
 	"auth-go/dto"
+	"auth-go/models"
 	"auth-go/utils"
 	"fmt"
 	"log"
@@ -10,9 +11,9 @@ import (
 
 type UserService interface {
 	CreateUser(name string, email string, password string) error
-	GetUserById()
-	GetAllUsers()
-	DeleteUserById()
+	GetUserById(id string) (*models.User, error)
+	GetAllUsers() ([]models.User, error)
+	DeleteUserById(id string) error
 	LoginUser(payload *dto.LoginUserRequestDTO) (string, error)
 }
 
@@ -36,16 +37,16 @@ func (u *UserServiceImp) CreateUser(name string, email string, password string) 
 	return nil
 }
 
-func (u *UserServiceImp) GetUserById() {
-	u.userRepository.GetById()
+func (u *UserServiceImp) GetUserById(id string) (*models.User, error) {
+	return u.userRepository.GetById(id)
 }
 
-func (u *UserServiceImp) GetAllUsers() {
-	u.userRepository.GetAll()
+func (u *UserServiceImp) GetAllUsers() ([]models.User, error) {
+	return u.userRepository.GetAll()
 }
 
-func (u *UserServiceImp) DeleteUserById() {
-	u.userRepository.DeleteById()
+func (u *UserServiceImp) DeleteUserById(id string) error {
+	return u.userRepository.DeleteById(id)
 }
 
 func (u *UserServiceImp) LoginUser(payload *dto.LoginUserRequestDTO) (string, error) {

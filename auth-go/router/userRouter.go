@@ -2,6 +2,8 @@ package router
 
 import (
 	"auth-go/controllers"
+	"auth-go/dto"
+	"auth-go/middlewares"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -18,9 +20,9 @@ func NewUserRouter(_userController *controllers.UserController) Router {
 }
 
 func (userRouter *UserRouter) Register(r chi.Router) {
-	r.Get("/profile", userRouter.userController.GetUserById)
-	r.Post("/sign-in", userRouter.userController.CreateUser)
+	r.With(middlewares.ValidateRequest(&dto.RegisterUserRequestDTO{})).Post("/sign-in", userRouter.userController.CreateUser)
+	r.With(middlewares.ValidateRequest(&dto.LoginUserRequestDTO{})).Post("/login", userRouter.userController.LoginUser)
 	r.Get("/", userRouter.userController.GetAllUsers)
+	r.Get("/profile", userRouter.userController.GetUserById)
 	r.Delete("/", userRouter.userController.DeleteById)
-	r.Post("/login", userRouter.userController.LoginUser)
 }

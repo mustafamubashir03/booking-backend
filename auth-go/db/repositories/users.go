@@ -9,10 +9,10 @@ import (
 
 type UserRepository interface {
 	Create(name string, email string, hashedPassword string) error
-	GetById() (*models.User, error)
+	GetById(id string) (*models.User, error)
 	GetByEmail(email string) (*models.User, error)
 	GetAll() ([]models.User, error)
-	DeleteById() error
+	DeleteById(id string) error
 }
 
 type UserRepositoryImp struct {
@@ -46,10 +46,10 @@ func (userRepo *UserRepositoryImp) Create(name string, email string, hashedPassw
 	return nil
 }
 
-func (userRepo *UserRepositoryImp) GetById() (*models.User, error) {
+func (userRepo *UserRepositoryImp) GetById(id string) (*models.User, error) {
 	fmt.Println("getting user by id hit")
 	query := "SELECT id, username, email, created_at, updated_at FROM users WHERE ID = ?"
-	row := userRepo.db.QueryRow(query, 1)
+	row := userRepo.db.QueryRow(query, id)
 	user := &models.User{}
 	err := row.Scan(&user.Id, &user.Username, &user.Email, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
@@ -103,10 +103,10 @@ func (userRepo *UserRepositoryImp) GetAll() ([]models.User, error) {
 	return users, err
 }
 
-func (userRepo *UserRepositoryImp) DeleteById() error {
-	fmt.Println("getting user by id hit")
-	query := "DELETE FROM users WHERE ID = ?"
-	result, err := userRepo.db.Exec(query, 2)
+func (userRepo *UserRepositoryImp) DeleteById(id string) error {
+	fmt.Println("delete user by id hit")
+	query := "DELETE FROM users WHERE id = ?"
+	result, err := userRepo.db.Exec(query, id)
 	if err != nil {
 		log.Fatalf("Error executing query: %v", err)
 	}

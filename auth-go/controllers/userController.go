@@ -2,10 +2,12 @@ package controllers
 
 import (
 	"auth-go/dto"
+	"auth-go/middlewares"
 	"auth-go/services"
 	"auth-go/utils"
-	"fmt"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type UserController struct {
@@ -21,52 +23,44 @@ func NewUserController(_userService services.UserService) *UserController {
 }
 
 func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("user controller hit")
-	u.userService.CreateUser("Mustafa", "mustafamubashir87@gmail.com", "12345")
+	payload := r.Context().Value(
+		middlewares.RequestDTOKey,
+	).(*dto.RegisterUserRequestDTO)
+	u.userService.CreateUser(payload.Name, payload.Email, payload.Password)
 	w.Write([]byte("created user successful"))
 }
 
 func (u *UserController) GetUserById(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("user controller hit")
-	u.userService.GetUserById()
-	w.Write([]byte("got user successful"))
+	userId := chi.URLParam(r, "id")
+	user, err := u.userService.GetUserById(userId)
+	if err != nil {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON write failed.", err)
+	}
+	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User fetched successfully.", user)
 }
 
 func (u *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("user controller hit")
-	u.userService.GetAllUsers()
-	w.Write([]byte("got all users successful"))
+	users, err := u.userService.GetAllUsers()
+	if err != nil {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON write failed.", err)
+	}
+	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Users fetched successfully.", users)
 }
 
 func (u *UserController) DeleteById(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("user controller hit")
-	u.userService.DeleteUserById()
-	w.Write([]byte("deleted user successful"))
+	userId := chi.URLParam(r, "id")
+	if err := u.userService.DeleteUserById(userId); err != nil {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON write failed.", err)
+		return
+	}
+	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User deleted successfully.", nil)
 }
 func (u *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
-	var payload dto.LoginUserRequestDTO
-	if jsonErr := utils.ReadJsonBody(r, &payload); jsonErr != nil {
-		err := utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON parse error.", jsonErr)
-		if err != nil {
-			utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON write failed.", err)
-		}
-		return
-	}
-
-	fmt.Printf("[PARSED PAYLOAD] Email: %q | Password: %q\n", payload.Email, payload.Password)
-
-	if validationErr := utils.Validate.Struct(payload); validationErr != nil {
-		err := utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Validation failed.", validationErr)
-		if err != nil {
-			utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON write failed.", err)
-		}
-		return
-	}
-	fmt.Println("user controller hit")
-	jwtToken, err := u.userService.LoginUser(&payload)
+	payload := r.Context().Value(middlewares.RequestDTOKey).(*dto.LoginUserRequestDTO)
+	jwtToken, err := u.userService.LoginUser(payload)
 	if err != nil {
-		fmt.Println(err)
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON write failed.", err)
+		return
 	}
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User logged in successfully.", jwtToken)
 }
