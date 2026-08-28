@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"auth-go/dto"
-	"auth-go/middlewares"
 	"auth-go/services"
 	"auth-go/utils"
 	"net/http"
@@ -23,15 +22,20 @@ func NewUserController(_userService services.UserService) *UserController {
 }
 
 func (u *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
-	payload := r.Context().Value(
-		middlewares.RequestDTOKey,
-	).(*dto.RegisterUserRequestDTO)
-	u.userService.CreateUser(payload.Name, payload.Email, payload.Password)
-	w.Write([]byte("created user successful"))
+	payload := r.Context().Value("payload").(*dto.RegisterUserRequestDTO)
+	if err := u.userService.CreateUser(payload.Name, payload.Email, payload.Password); err != nil {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Failed to create user.", err)
+		return
+	}
+
+	utils.WriteJsonSuccessResponse(w, http.StatusCreated, "User created successfully.", nil)
 }
 
 func (u *UserController) GetUserById(w http.ResponseWriter, r *http.Request) {
 	userId := chi.URLParam(r, "id")
+	if userId == "" {
+		userId = r.Context().Value("userId").(string)
+	}
 	user, err := u.userService.GetUserById(userId)
 	if err != nil {
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON write failed.", err)
@@ -49,6 +53,9 @@ func (u *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 
 func (u *UserController) DeleteById(w http.ResponseWriter, r *http.Request) {
 	userId := chi.URLParam(r, "id")
+	if userId == "" {
+		userId = r.Context().Value("userId").(string)
+	}
 	if err := u.userService.DeleteUserById(userId); err != nil {
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON write failed.", err)
 		return
@@ -56,7 +63,7 @@ func (u *UserController) DeleteById(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User deleted successfully.", nil)
 }
 func (u *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
-	payload := r.Context().Value(middlewares.RequestDTOKey).(*dto.LoginUserRequestDTO)
+	payload := r.Context().Value("payload").(*dto.LoginUserRequestDTO)
 	jwtToken, err := u.userService.LoginUser(payload)
 	if err != nil {
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "JSON write failed.", err)

@@ -9,9 +9,9 @@ import (
 )
 
 func GenerateJWT(email string, id string) (string, error) {
-	secretKey := config.GetString("JWT_SECRET", "TOKEN")
+	secretKey := []byte(config.GetString("JWT_SECRET", "TOKEN"))
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"email": email, "id": id, "exp": time.Now().Add(time.Hour * 24).Unix()})
-	tokenString, err := token.SignedString([]byte(secretKey))
+	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
 		log.Fatal(err)
 	}

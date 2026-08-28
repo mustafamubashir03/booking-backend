@@ -6,7 +6,6 @@ import (
 	"auth-go/models"
 	"auth-go/utils"
 	"fmt"
-	"log"
 )
 
 type UserService interface {
@@ -28,12 +27,21 @@ func NewUserService(_userRepository db.UserRepository) UserService {
 	return userService
 }
 
-func (u *UserServiceImp) CreateUser(name string, email string, password string) error {
+func (u *UserServiceImp) CreateUser(
+	name string,
+	email string,
+	password string,
+) error {
+
 	hashedPassword, err := utils.CreateHashPassword(password)
 	if err != nil {
-		log.Fatal("error in creating hash password")
+		return fmt.Errorf("failed to hash password: %w", err)
 	}
-	u.userRepository.Create(name, email, string(hashedPassword))
+
+	if err := u.userRepository.Create(name, email, string(hashedPassword)); err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
+
 	return nil
 }
 
@@ -53,6 +61,9 @@ func (u *UserServiceImp) LoginUser(payload *dto.LoginUserRequestDTO) (string, er
 	userFound, err := u.userRepository.GetByEmail(payload.Email)
 	if err != nil {
 		return "", err
+	}
+	if userFound.Id == 0 {
+		return "", fmt.Errorf("user not found")
 	}
 	isMatch := utils.CompareHashedPassword([]byte(userFound.Password), payload.Password)
 	if !isMatch {

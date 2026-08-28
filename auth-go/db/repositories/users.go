@@ -4,7 +4,6 @@ import (
 	"auth-go/models"
 	"database/sql"
 	"fmt"
-	"log"
 )
 
 type UserRepository interface {
@@ -28,14 +27,18 @@ func NewUserRepository(_db *sql.DB) UserRepository {
 }
 func (userRepo *UserRepositoryImp) Create(name string, email string, hashedPassword string) error {
 	fmt.Println("user repository hit")
+	if name == "" || email == "" || hashedPassword == "" {
+		fmt.Println("Invalid user data")
+		return fmt.Errorf("Invalid user data")
+	}
 	query := "INSERT INTO users(username, email, password) VALUES (?,?,?)"
 	result, err := userRepo.db.Exec(query, name, email, hashedPassword)
 	if err != nil {
-		log.Fatalf("Error executing query: %v", err)
+		return fmt.Errorf("error executing query: %w", err)
 	}
 	rowsAffected, rowErr := result.RowsAffected()
 	if rowErr != nil {
-		log.Fatalf("Error getting rows affected: %v", rowErr)
+		return fmt.Errorf("error getting rows affected: %w", rowErr)
 	}
 	if rowsAffected == 0 {
 		fmt.Println("No user created")
@@ -57,7 +60,7 @@ func (userRepo *UserRepositoryImp) GetById(id string) (*models.User, error) {
 			fmt.Println("No rows found")
 			return nil, err
 		}
-		log.Fatalf("Error scanning database: %v", err)
+		return nil, fmt.Errorf("error scanning database: %w", err)
 	}
 	fmt.Println("User fetched", user)
 	return user, err
@@ -73,7 +76,7 @@ func (userRepo *UserRepositoryImp) GetByEmail(email string) (*models.User, error
 			fmt.Println("No rows found")
 			return nil, err
 		}
-		log.Fatalf("Error scanning database: %v", err)
+		return nil, fmt.Errorf("error scanning database: %w", err)
 	}
 	fmt.Println("User fetched", user)
 	return user, err
@@ -84,7 +87,7 @@ func (userRepo *UserRepositoryImp) GetAll() ([]models.User, error) {
 	query := "SELECT id, username, email, created_at, updated_at FROM users"
 	rows, err := userRepo.db.Query(query)
 	if err != nil {
-		log.Fatalf("Error executing query: %v", err)
+		return nil, fmt.Errorf("error executing query: %w", err)
 	}
 	users := []models.User{}
 	for rows.Next() {
@@ -95,7 +98,7 @@ func (userRepo *UserRepositoryImp) GetAll() ([]models.User, error) {
 				fmt.Println("No rows found")
 				return nil, err
 			}
-			log.Fatalf("Error scanning database: %v", err)
+			return nil, fmt.Errorf("error scanning database: %w", err)
 		}
 		users = append(users, *user)
 	}
@@ -108,11 +111,11 @@ func (userRepo *UserRepositoryImp) DeleteById(id string) error {
 	query := "DELETE FROM users WHERE id = ?"
 	result, err := userRepo.db.Exec(query, id)
 	if err != nil {
-		log.Fatalf("Error executing query: %v", err)
+		return fmt.Errorf("error executing query: %w", err)
 	}
 	rowsAffected, rowsErr := result.RowsAffected()
 	if rowsErr != nil {
-		log.Fatalf("Error getting rows affected: %v", rowsErr)
+		return fmt.Errorf("error getting rows affected: %w", rowsErr)
 	}
 	if rowsAffected == 0 {
 		fmt.Println("No user deleted")
