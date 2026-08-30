@@ -110,3 +110,78 @@ This architecture is engineered to handle enterprise-level scale and high-concur
 - **Independent Scaling:** Because the system is decomposed into microservices, each component can be scaled horizontally independent of the others. If the system experiences a backlog of emails, you can spin up additional `notification-service` containers without paying for extra `hotel-service` resources.
 - **Stateless Application Layer:** The Node.js services (Booking, Hotel, Notification) are entirely stateless. State is managed exclusively by MySQL (persistent data) and Redis (locks, queues, cache). This allows you to deploy multiple instances of any service behind a load balancer, providing high availability and fault tolerance.
 - **Traffic Orchestration:** Redis acts as the central nervous system for this horizontal scaling, coordinating locks across multiple booking instances to ensure that no matter which physical server processes a request, race conditions are mitigated, and database integrity is preserved.
+
+---
+
+## Evolution of auth-go: From Authentication to RBAC
+
+### Phase 1 — Authentication Foundation
+
+The `auth-go` service was initially built with a focused scope: handle user registration, login, and session management using JWT. The underlying database (`auth_db`) at this stage held a single core table — `users` — containing user credentials and profile data. The service already followed the Dependency Injection pattern, with interfaces governing every layer (repository → service → controller), making it ready to be extended without structural rewrites.
+
+A dedicated migration (`20260730210330_add_some_column.sql`) was applied during this phase to evolve the `users` table as requirements grew. The authentication middleware (`AuthMiddleware`) was wired to validate JWT tokens on protected routes.
+
+### Phase 2 — RBAC Implementation (Same Database, New Tables)
+
+Once the authentication layer was stable, Role-Based Access Control (RBAC) was layered on top of the **same `auth_db` database**, expanding the schema incrementally through four new SQL migrations rather than standing up a separate database or service. This was a deliberate decision: authentication and authorization are tightly coupled concerns and sharing the same database eliminates the need for cross-service joins or remote calls when validating permissions.
+
+#### New Tables Added to `auth_db`
+
+The following tables were introduced in chronological migration order:
+
+| Migration File | Table Created | Purpose |
+|---|---|---|
+| `20260829115248_create_role_table.sql` | `roles` | Stores named roles (e.g., `admin`, `guest`) with an optional description |
+| `20260829115348_create_permissions_table.sql` | `permissions` | Stores granular permissions with `resource` and `action` fields (e.g., `resource=booking`, `action=create`) |
+| `20260829115409_create_role_permissions_table.sql` | `role_permissions` | Junction table linking roles to their granted permissions (many-to-many) |
+| `20260829115424_create_user_roles_table.sql` | `user_roles` | Junction table assigning roles to users (many-to-many) |
+
+This schema forms a standard RBAC graph: **User → UserRole → Role → RolePermission → Permission**. A user's effective permission set is resolved by walking this chain, which is reflected directly in the SQL joins written in the repository layer.
+
+Two **through (junction) tables** are central to this design:
+- **`role_permissions`** — models the many-to-many relationship between `roles` and `permissions`. A single role can hold any number of permissions, and a single permission can be shared across many roles, without duplicating rows in either base table.
+- **`user_roles`** — models the many-to-many relationship between `users` and `roles`. A user can be assigned multiple roles simultaneously, and the same role can be assigned to many users. Effective permissions are derived by traversing both junction tables in a single chained `JOIN`.
+
+#### New Repository Services Created
+
+To keep each concern isolated, a dedicated repository file was created per table, all living under `auth-go/db/repositories/` and all sharing the same `*sql.DB` connection injected from `application.go`:
+
+- **[roles.go](file:///g:/Booking%20Backend/auth-go/db/repositories/roles.go)** — `RoleRepository` interface + `RoleRepositoryImp`: CRUD for the `roles` table.
+- **[permissions.go](file:///g:/Booking%20Backend/auth-go/db/repositories/permissions.go)** — `PermissionRepository` interface + `PermissionRepositoryImp`: CRUD for the `permissions` table, where each permission carries a `resource` and `action` pair for fine-grained control.
+- **[role_permissions.go](file:///g:/Booking%20Backend/auth-go/db/repositories/role_permissions.go)** — `RolePermissionRepository` interface + `RolePermissionRepositoryImp`: manages assignment and removal of permissions from roles; resolves the full permission list for a given role via an `INNER JOIN`.
+- **[user_roles.go](file:///g:/Booking%20Backend/auth-go/db/repositories/user_roles.go)** — `UserRoleRepository` interface + `UserRoleRepositoryImp`: assigns/unassigns roles to users; exposes `GetUserPermissions`, `HasPermission`, and `HasRole` — the key enforcement queries used by authorization middleware. The `HasPermission` query uses a single `EXISTS` clause traversing `user_roles → role_permissions → permissions` in one round-trip.
+
+#### New Service, Controller, and Router Layers
+
+Mirroring the pattern already established for the user domain, a full vertical slice was created for roles:
+
+- **`services/roleService.go`** — `RoleService` interface + `RoleServiceImp`: delegates all calls to `RoleRepository`. Constructed via `NewRoleService` and injected with a `RoleRepository` interface (not a concrete type), preserving testability.
+- **`controllers/roleController.go`** — `RoleController`: handles HTTP concerns for role CRUD (`CreateRole`, `GetAllRoles`, `GetRoleById`, `GetRoleByName`, `UpdateRoleById`, `DeleteRoleById`). Request payloads (`CreateRoleRequestDTO`, `UpdateRoleRequestDTO`) are defined in `dto/rbac.go` and validated by the existing `ValidateRequest` middleware before reaching the controller.
+- **`router/roleRouter.go`** — `RoleRouter`: registers all role endpoints under the chi router. All routes are gated behind `AuthMiddleware` to ensure only authenticated users can manage roles.
+
+#### Rate Limiting Middleware
+
+A global rate-limiting middleware ([rate_limiter.go](file:///g:/Booking%20Backend/auth-go/middlewares/rate_limiter.go)) is applied to **every route** in the service via `chiRouter.Use(middlewares.RateLimiter)` in `SetupRouter`. It uses the `golang.org/x/time/rate` token-bucket implementation — configured at **5 requests per second** — and immediately returns `429 Too Many Requests` to any caller that exceeds the limit, without the request ever reaching a controller or repository. Because it is registered as a global chi middleware (not per-route), no individual router or controller needs to be aware of it; protection is uniform across authentication, role management, and any future endpoints.
+
+#### Reverse Proxy Utility (Rough Implementation)
+
+A rough `ProxyToService` utility ([proxy.go](file:///g:/Booking%20Backend/auth-go/utils/proxy.go)) was added as the groundwork for turning `auth-go` into a lightweight API gateway. It wraps Go's standard `net/http/httputil.ReverseProxy` and exposes a simple factory: given a `targetBaseURL` and a `pathPrefix`, it returns an `http.HandlerFunc` that:
+1. Strips the gateway-specific prefix from the incoming path.
+2. Rewrites the request URL to the downstream service.
+3. Sets standard `X-Forwarded-*` headers via `req.SetXForwarded()`.
+4. Forwards the authenticated **`X-User-ID`** header so downstream services can identify the caller without re-validating the JWT.
+
+A demonstration route is already registered: `GET /fake-store/*` proxies to `https://fakestoreapi.com/products`, serving as a live proof-of-concept. In the future, similar proxy routes will forward requests to `hotel-service`, `booking-service`, and other microservices in the monorepo — with `auth-go` acting as the single authenticated entry point.
+
+#### Wiring into the Application
+
+The new layer was wired into `app/application.go` following the exact same bootstrapping pattern as the user domain — `NewRoleRepository` → `NewRoleService` → `NewRoleController` → `NewRoleRouter` — and the resulting `roleRouter` was passed alongside `userRouter` into the updated `SetupRouter` function. No existing wiring was disturbed; the extension was purely additive.
+
+```
+auth_db (same database)
+├── users              ← Phase 1 (Auth)
+├── roles              ← Phase 2 (RBAC)
+├── permissions        ← Phase 2 (RBAC)
+├── role_permissions   ← Phase 2 (RBAC)
+└── user_roles         ← Phase 2 (RBAC)
+```

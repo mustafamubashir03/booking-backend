@@ -13,6 +13,7 @@ type RoleRepository interface {
 	DeleteRoleById(id int) error
 	UpdateRoleById(id int, name string, description string) (*models.Role, error)
 	CreateRole(name string, description string) error
+	GetRolesPermissions(roleId int) ([]models.Permission, error)
 }
 
 type RoleRepositoryImp struct {
@@ -121,4 +122,25 @@ func (roleRepo *RoleRepositoryImp) CreateRole(name string, description string) e
 	}
 	fmt.Println("Rows affected", rowsAffected)
 	return nil
+}
+
+func (roleRepo *RoleRepositoryImp) GetRolesPermissions(roleId int) ([]models.Permission, error) {
+	query := "SELECT p.id, p.name, p.resource, p.action, p.created_at, p.updated_at FROM role_permissions rp INNER JOIN permissions p ON rp.permission_id = p.id WHERE rp.role_id = ?"
+	rows, err := roleRepo.db.Query(query, roleId)
+	if err != nil {
+		return nil, fmt.Errorf("error executing query: %w", err)
+	}
+	permissions := []models.Permission{}
+	for rows.Next() {
+		permission := &models.Permission{}
+		err := rows.Scan(&permission.Id, &permission.Name, &permission.Resource, &permission.Action, &permission.CreatedAt, &permission.UpdatedAt)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, err
+			}
+			return nil, fmt.Errorf("error scanning database: %w", err)
+		}
+		permissions = append(permissions, *permission)
+	}
+	return permissions, nil
 }
