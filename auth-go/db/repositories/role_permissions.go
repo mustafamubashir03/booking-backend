@@ -19,7 +19,7 @@ type RolePermissionRepositoryImp struct {
 	db *sql.DB
 }
 
-func NewRolePermissionRepositoryImp(db *sql.DB) *RolePermissionRepositoryImp {
+func NewRolePermissionRepository(db *sql.DB) *RolePermissionRepositoryImp {
 	return &RolePermissionRepositoryImp{db: db}
 }
 

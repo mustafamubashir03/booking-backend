@@ -2,10 +2,13 @@ package middlewares
 
 import (
 	config "auth-go/config/env"
+	dbConfig "auth-go/db"
+	dbRepository "auth-go/db/repositories"
 	"auth-go/utils"
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -43,5 +46,35 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 
 	})
+
+}
+
+func GetAllRolesMiddleware(roles ...string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			userId := r.Context().Value("userId").(string)
+			dbConn, dbErr := dbConfig.SetupDB()
+			if dbErr != nil {
+				utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Database error", dbErr)
+				return
+			}
+			userRoleRepository := dbRepository.NewUserRoleRepository(dbConn)
+			userIdInt, err := strconv.Atoi(userId)
+			if err != nil {
+				utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Invalid User ID", err)
+				return
+			}
+			exists, err := userRoleRepository.HasAllRoles(userIdInt, roles)
+			if err != nil {
+				utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Error checking roles", err)
+				return
+			}
+			if !exists {
+				utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Unauthorized", nil)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 
 }

@@ -12,14 +12,15 @@ type UserRoleRepository interface {
 	UnAssignRole(userId int, roleId int) error
 	GetUserPermissions(userId int) ([]models.Permission, error)
 	HasPermission(userId int, permissionName string) (bool, error)
-	HasRole(userId int, roleName string) (bool, error)
+	HasAllRoles(userId int, roleNames []string) (bool, error)
+	HasAnyRole(userId int, roleNames []string) (bool, error)
 }
 
 type UserRoleRepositoryImp struct {
 	db *sql.DB
 }
 
-func NewUserRoleRepositoryImp(db *sql.DB) UserRoleRepository {
+func NewUserRoleRepository(db *sql.DB) UserRoleRepository {
 	return &UserRoleRepositoryImp{db: db}
 }
 
@@ -90,9 +91,30 @@ func (userRoleRepo *UserRoleRepositoryImp) HasPermission(userId int, permissionN
 	return exists, nil
 }
 
-func (userRoleRepo *UserRoleRepositoryImp) HasRole(userId int, roleName string) (bool, error) {
-	query := "SELECT EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.name = ?)"
-	rows, err := userRoleRepo.db.Query(query, userId, roleName)
+func (userRoleRepo *UserRoleRepositoryImp) HasAllRoles(userId int, roles []string) (bool, error) {
+	query := "SELECT EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.name IN (?))"
+	rows, err := userRoleRepo.db.Query(query, userId, roles)
+	if err != nil {
+		return false, fmt.Errorf("error executing query: %w", err)
+	}
+	var exists bool
+	for rows.Next() {
+		err := rows.Scan(&exists)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				fmt.Println("No rows found")
+				return false, err
+			}
+			return false, fmt.Errorf("error scanning database: %w", err)
+		}
+	}
+	fmt.Println("Has role", exists)
+	return exists, nil
+}
+
+func (userRoleRepo *UserRoleRepositoryImp) HasAnyRole(userId int, roles []string) (bool, error) {
+	query := "SELECT EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.name IN (?))"
+	rows, err := userRoleRepo.db.Query(query, userId, roles)
 	if err != nil {
 		return false, fmt.Errorf("error executing query: %w", err)
 	}
