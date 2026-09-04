@@ -14,6 +14,10 @@ type RoleRepository interface {
 	UpdateRoleById(id int, name string, description string) (*models.Role, error)
 	CreateRole(name string, description string) error
 	GetRolesPermissions(roleId int) ([]models.Permission, error)
+	AssignPermissionToRole(roleId int, permissionId int) error
+	RemovePermissionFromRole(roleId int, permissionId int) error
+	RevokeAllPermissionsFromRole(roleId int) error
+	RevokeAllRolesPermissions() error
 }
 
 type RoleRepositoryImp struct {
@@ -28,7 +32,7 @@ func NewRoleRepository(_db *sql.DB) RoleRepository {
 }
 
 func (roleRepo *RoleRepositoryImp) GetRoleById(id int) (*models.Role, error) {
-	query := "SELECT id, name, description, created_at, updated_at FROM roles WHERE id = ?"
+	query := `SELECT id, name, description, created_at, updated_at FROM roles WHERE id = ?`
 	row := roleRepo.db.QueryRow(query, id)
 	role := &models.Role{}
 	err := row.Scan(&role.Id, &role.Name, &role.Description, &role.CreatedAt, &role.UpdatedAt)
@@ -44,7 +48,7 @@ func (roleRepo *RoleRepositoryImp) GetRoleById(id int) (*models.Role, error) {
 }
 
 func (roleRepo *RoleRepositoryImp) GetRoleByName(name string) (*models.Role, error) {
-	query := "SELECT id, name, description, created_at, updated_at FROM roles WHERE name = ?"
+	query := `SELECT id, name, description, created_at, updated_at FROM roles WHERE name = ?`
 	row := roleRepo.db.QueryRow(query, name)
 	role := &models.Role{}
 	err := row.Scan(&role.Id, &role.Name, &role.Description, &role.CreatedAt, &role.UpdatedAt)
@@ -60,7 +64,7 @@ func (roleRepo *RoleRepositoryImp) GetRoleByName(name string) (*models.Role, err
 }
 
 func (roleRepo *RoleRepositoryImp) GetAllRoles() ([]models.Role, error) {
-	query := "SELECT id, name, description, created_at, updated_at FROM roles"
+	query := `SELECT id, name, description, created_at, updated_at FROM roles`
 	rows, err := roleRepo.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %w", err)
@@ -83,7 +87,7 @@ func (roleRepo *RoleRepositoryImp) GetAllRoles() ([]models.Role, error) {
 }
 
 func (roleRepo *RoleRepositoryImp) DeleteRoleById(id int) error {
-	query := "DELETE FROM roles WHERE id = ?"
+	query := `DELETE FROM roles WHERE id = ?`
 	result, err := roleRepo.db.Exec(query, id)
 	if err != nil {
 		return fmt.Errorf("error executing query: %w", err)
@@ -97,7 +101,7 @@ func (roleRepo *RoleRepositoryImp) DeleteRoleById(id int) error {
 }
 
 func (roleRepo *RoleRepositoryImp) UpdateRoleById(id int, name string, description string) (*models.Role, error) {
-	query := "UPDATE roles SET name = ?, description = ? WHERE id = ?"
+	query := `UPDATE roles SET name = ?, description = ? WHERE id = ?`
 	result, err := roleRepo.db.Exec(query, name, description, id)
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %w", err)
@@ -111,7 +115,7 @@ func (roleRepo *RoleRepositoryImp) UpdateRoleById(id int, name string, descripti
 }
 
 func (roleRepo *RoleRepositoryImp) CreateRole(name string, description string) error {
-	query := "INSERT INTO roles (name, description) VALUES (?, ?)"
+	query := `INSERT INTO roles (name, description) VALUES (?, ?)`
 	result, err := roleRepo.db.Exec(query, name, description)
 	if err != nil {
 		return fmt.Errorf("error executing query: %w", err)
@@ -125,7 +129,7 @@ func (roleRepo *RoleRepositoryImp) CreateRole(name string, description string) e
 }
 
 func (roleRepo *RoleRepositoryImp) GetRolesPermissions(roleId int) ([]models.Permission, error) {
-	query := "SELECT p.id, p.name, p.resource, p.action, p.created_at, p.updated_at FROM role_permissions rp INNER JOIN permissions p ON rp.permission_id = p.id WHERE rp.role_id = ?"
+	query := `SELECT p.id, p.name, p.resource, p.action, p.created_at, p.updated_at FROM role_permissions rp INNER JOIN permissions p ON rp.permission_id = p.id WHERE rp.role_id = ?`
 	rows, err := roleRepo.db.Query(query, roleId)
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %w", err)
@@ -143,4 +147,60 @@ func (roleRepo *RoleRepositoryImp) GetRolesPermissions(roleId int) ([]models.Per
 		permissions = append(permissions, *permission)
 	}
 	return permissions, nil
+}
+
+func (roleRepo *RoleRepositoryImp) AssignPermissionToRole(roleId int, permissionId int) error {
+	query := `INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)`
+	result, err := roleRepo.db.Exec(query, roleId, permissionId)
+	if err != nil {
+		return fmt.Errorf("error executing query: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error getting rows affected: %w", err)
+	}
+	fmt.Println("Rows affected", rowsAffected)
+	return nil
+}
+
+func (roleRepo *RoleRepositoryImp) RemovePermissionFromRole(roleId int, permissionId int) error {
+	query := `DELETE FROM role_permissions WHERE role_id = ? AND permission_id = ?`
+	result, err := roleRepo.db.Exec(query, roleId, permissionId)
+	if err != nil {
+		return fmt.Errorf("error executing query: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error getting rows affected: %w", err)
+	}
+	fmt.Println("Rows affected", rowsAffected)
+	return nil
+}
+
+func (roleRepo *RoleRepositoryImp) RevokeAllPermissionsFromRole(roleId int) error {
+	query := `DELETE FROM role_permissions WHERE role_id = ?`
+	result, err := roleRepo.db.Exec(query, roleId)
+	if err != nil {
+		return fmt.Errorf("error executing query: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error getting rows affected: %w", err)
+	}
+	fmt.Println("Rows affected", rowsAffected)
+	return nil
+}
+
+func (roleRepo *RoleRepositoryImp) RevokeAllRolesPermissions() error {
+	query := `DELETE FROM role_permissions`
+	result, err := roleRepo.db.Exec(query)
+	if err != nil {
+		return fmt.Errorf("error executing query: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error getting rows affected: %w", err)
+	}
+	fmt.Println("Rows affected", rowsAffected)
+	return nil
 }

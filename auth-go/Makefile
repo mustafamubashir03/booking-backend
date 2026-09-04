@@ -9,3 +9,9 @@ migrate-up:
 
 migrate-down:
 	goose -dir $(MIGRATIONS_FOLDER) mysql "$(DB_URL)" down
+
+migrate-reset:
+	goose -dir $(MIGRATIONS_FOLDER) mysql "$(DB_URL)" reset
+
+migrate-status:
+	goose -dir $(MIGRATIONS_FOLDER) mysql "$(DB_URL)" status

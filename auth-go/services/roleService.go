@@ -12,14 +12,27 @@ type RoleService interface {
 	DeleteRoleById(id int) error
 	UpdateRoleById(id int, name string, description string) (*models.Role, error)
 	CreateRole(name string, description string) error
+	GetRolesPermissions(roleId int) ([]models.Permission, error)
+	AssignPermissionToRole(roleId int, permissionId int) error
+	RemovePermissionFromRole(roleId int, permissionId int) error
+	RevokeAllPermissionsFromRole(roleId int) error
+	RevokeAllRolesPermissions() error
+	AssignRoleToUser(userId int, roleId int) error
+	UnAssignRoleFromUser(userId int, roleId int) error
+	GetUserRoles(userId int) ([]models.Role, error)
+	GetUserPermissions(userId int) ([]models.Permission, error)
+	HasPermission(userId int, permissionName string) (bool, error)
+	HasAllRoles(userId int, roleNames []string) (bool, error)
 }
 
 type RoleServiceImp struct {
-	roleRepository db.RoleRepository
+	roleRepository       db.RoleRepository
+	permissionRepository db.PermissionRepository
+	userRoleRepository   db.UserRoleRepository
 }
 
-func NewRoleService(_roleRepository db.RoleRepository) RoleService {
-	return &RoleServiceImp{roleRepository: _roleRepository}
+func NewRoleService(_roleRepository db.RoleRepository, _permissionRepository db.PermissionRepository, _userRoleRepository db.UserRoleRepository) RoleService {
+	return &RoleServiceImp{roleRepository: _roleRepository, permissionRepository: _permissionRepository, userRoleRepository: _userRoleRepository}
 }
 
 func (roleService *RoleServiceImp) GetRoleById(id int) (*models.Role, error) {
@@ -44,4 +57,48 @@ func (roleService *RoleServiceImp) UpdateRoleById(id int, name string, descripti
 
 func (roleService *RoleServiceImp) CreateRole(name string, description string) error {
 	return roleService.roleRepository.CreateRole(name, description)
+}
+
+func (roleService *RoleServiceImp) GetRolesPermissions(roleId int) ([]models.Permission, error) {
+	return roleService.roleRepository.GetRolesPermissions(roleId)
+}
+
+func (roleService *RoleServiceImp) AssignPermissionToRole(roleId int, permissionId int) error {
+	return roleService.roleRepository.AssignPermissionToRole(roleId, permissionId)
+}
+
+func (roleService *RoleServiceImp) RemovePermissionFromRole(roleId int, permissionId int) error {
+	return roleService.roleRepository.RemovePermissionFromRole(roleId, permissionId)
+}
+
+func (roleService *RoleServiceImp) RevokeAllPermissionsFromRole(roleId int) error {
+	return roleService.roleRepository.RevokeAllPermissionsFromRole(roleId)
+}
+
+func (roleService *RoleServiceImp) RevokeAllRolesPermissions() error {
+	return roleService.roleRepository.RevokeAllRolesPermissions()
+}
+
+func (roleService *RoleServiceImp) AssignRoleToUser(userId int, roleId int) error {
+	return roleService.userRoleRepository.AssignRoleToUser(userId, roleId)
+}
+
+func (roleService *RoleServiceImp) UnAssignRoleFromUser(userId int, roleId int) error {
+	return roleService.userRoleRepository.UnAssignRoleFromUser(userId, roleId)
+}
+
+func (roleService *RoleServiceImp) GetUserRoles(userId int) ([]models.Role, error) {
+	return roleService.userRoleRepository.GetUserRoles(userId)
+}
+
+func (roleService *RoleServiceImp) GetUserPermissions(userId int) ([]models.Permission, error) {
+	return roleService.userRoleRepository.GetUserPermissions(userId)
+}
+
+func (roleService *RoleServiceImp) HasPermission(userId int, permissionName string) (bool, error) {
+	return roleService.userRoleRepository.HasPermission(userId, permissionName)
+}
+
+func (roleService *RoleServiceImp) HasAllRoles(userId int, roleNames []string) (bool, error) {
+	return roleService.userRoleRepository.HasAllRoles(userId, roleNames)
 }

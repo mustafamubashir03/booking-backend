@@ -31,7 +31,7 @@ func (userRepo *UserRepositoryImp) Create(name string, email string, hashedPassw
 		fmt.Println("Invalid user data")
 		return fmt.Errorf("Invalid user data")
 	}
-	query := "INSERT INTO users(username, email, password) VALUES (?,?,?)"
+	query := `INSERT INTO users(username, email, password) VALUES (?,?,?)`
 	result, err := userRepo.db.Exec(query, name, email, hashedPassword)
 	if err != nil {
 		return fmt.Errorf("error executing query: %w", err)
@@ -51,7 +51,7 @@ func (userRepo *UserRepositoryImp) Create(name string, email string, hashedPassw
 
 func (userRepo *UserRepositoryImp) GetById(id string) (*models.User, error) {
 	fmt.Println("getting user by id hit")
-	query := "SELECT id, username, email, created_at, updated_at FROM users WHERE ID = ?"
+	query := `SELECT id, username, email, created_at, updated_at FROM users WHERE ID = ?`
 	row := userRepo.db.QueryRow(query, id)
 	user := &models.User{}
 	err := row.Scan(&user.Id, &user.Username, &user.Email, &user.CreatedAt, &user.UpdatedAt)
@@ -67,7 +67,7 @@ func (userRepo *UserRepositoryImp) GetById(id string) (*models.User, error) {
 }
 func (userRepo *UserRepositoryImp) GetByEmail(email string) (*models.User, error) {
 	fmt.Println("getting user by email hit")
-	query := "SELECT id, username, email, password, created_at, updated_at FROM users WHERE email = ?"
+	query := `SELECT id, username, email, password, created_at, updated_at FROM users WHERE email = ?`
 	row := userRepo.db.QueryRow(query, email)
 	user := &models.User{}
 	err := row.Scan(&user.Id, &user.Username, &user.Email, &user.Password, &user.CreatedAt, &user.UpdatedAt)
@@ -84,7 +84,7 @@ func (userRepo *UserRepositoryImp) GetByEmail(email string) (*models.User, error
 
 func (userRepo *UserRepositoryImp) GetAll() ([]models.User, error) {
 	fmt.Println("getting user by id hit")
-	query := "SELECT id, username, email, created_at, updated_at FROM users"
+	query := `SELECT id, username, email, created_at, updated_at FROM users`
 	rows, err := userRepo.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %w", err)
@@ -108,7 +108,7 @@ func (userRepo *UserRepositoryImp) GetAll() ([]models.User, error) {
 
 func (userRepo *UserRepositoryImp) DeleteById(id string) error {
 	fmt.Println("delete user by id hit")
-	query := "DELETE FROM users WHERE id = ?"
+	query := `DELETE FROM users WHERE id = ?`
 	result, err := userRepo.db.Exec(query, id)
 	if err != nil {
 		return fmt.Errorf("error executing query: %w", err)

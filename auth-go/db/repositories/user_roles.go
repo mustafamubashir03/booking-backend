@@ -4,12 +4,13 @@ import (
 	"auth-go/models"
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 type UserRoleRepository interface {
 	GetUserRoles(userId int) ([]models.Role, error)
-	AssignRole(userId int, roleId int) error
-	UnAssignRole(userId int, roleId int) error
+	AssignRoleToUser(userId int, roleId int) error
+	UnAssignRoleFromUser(userId int, roleId int) error
 	GetUserPermissions(userId int) ([]models.Permission, error)
 	HasPermission(userId int, permissionName string) (bool, error)
 	HasAllRoles(userId int, roleNames []string) (bool, error)
@@ -25,25 +26,45 @@ func NewUserRoleRepository(db *sql.DB) UserRoleRepository {
 }
 
 func (userRoleRepo *UserRoleRepositoryImp) GetUserRoles(userId int) ([]models.Role, error) {
-	query := "SELECT r.id, ur.user_id, ur.role_id, ur.created_at, ur.updated_at FROM user_roles ur INNER JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = ?"
+	query := `
+		SELECT
+			r.id,
+			r.name,
+			r.description,
+			r.created_at,
+			r.updated_at
+		FROM user_roles ur
+		INNER JOIN roles r ON r.id = ur.role_id
+		WHERE ur.user_id = ?
+	`
+
 	rows, err := userRoleRepo.db.Query(query, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %w", err)
 	}
+	defer rows.Close()
+
 	roles := []models.Role{}
+
 	for rows.Next() {
-		role := &models.Role{}
-		err := rows.Scan(&role.Id, &role.Name, &role.Description, &role.CreatedAt, &role.UpdatedAt)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				fmt.Println("No rows found")
-				return nil, err
-			}
+		role := models.Role{}
+
+		if err := rows.Scan(
+			&role.Id,
+			&role.Name,
+			&role.Description,
+			&role.CreatedAt,
+			&role.UpdatedAt,
+		); err != nil {
 			return nil, fmt.Errorf("error scanning database: %w", err)
 		}
-		roles = append(roles, *role)
+
+		roles = append(roles, role)
 	}
-	fmt.Println("Roles fetched", roles)
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating roles: %w", err)
+	}
+
 	return roles, nil
 }
 
@@ -53,87 +74,129 @@ func (userRoleRepo *UserRoleRepositoryImp) GetUserPermissions(userId int) ([]mod
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %w", err)
 	}
+	defer rows.Close()
 	permissions := []models.Permission{}
 	for rows.Next() {
 		permission := &models.Permission{}
-		err := rows.Scan(&permission.Id, &permission.Name, &permission.Resource, &permission.Action, &permission.CreatedAt, &permission.UpdatedAt)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				fmt.Println("No rows found")
-				return nil, err
-			}
+		if err := rows.Scan(
+			&permission.Id,
+			&permission.Name,
+			&permission.Resource,
+			&permission.Action,
+			&permission.CreatedAt,
+			&permission.UpdatedAt,
+		); err != nil {
 			return nil, fmt.Errorf("error scanning database: %w", err)
 		}
 		permissions = append(permissions, *permission)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 	fmt.Println("Permissions fetched", permissions)
 	return permissions, nil
 }
 
 func (userRoleRepo *UserRoleRepositoryImp) HasPermission(userId int, permissionName string) (bool, error) {
-	query := "SELECT EXISTS (SELECT 1 FROM user_roles ur JOIN role_permissions rp ON ur.role_id = rp.role_id JOIN permissions p ON rp.permission_id = p.id WHERE ur.user_id = ? AND p.name = ?)"
-	rows, err := userRoleRepo.db.Query(query, userId, permissionName)
-	if err != nil {
-		return false, fmt.Errorf("error executing query: %w", err)
-	}
+	query := `
+		SELECT EXISTS (
+			SELECT 1
+			FROM user_roles ur
+			JOIN role_permissions rp ON ur.role_id = rp.role_id
+			JOIN permissions p ON rp.permission_id = p.id
+			WHERE ur.user_id = ?
+			AND p.name = ?
+		)
+	`
+
 	var exists bool
-	for rows.Next() {
-		err := rows.Scan(&exists)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				fmt.Println("No rows found")
-				return false, err
-			}
-			return false, fmt.Errorf("error scanning database: %w", err)
-		}
+
+	err := userRoleRepo.db.QueryRow(
+		query,
+		userId,
+		permissionName,
+	).Scan(&exists)
+
+	if err != nil {
+		return false, fmt.Errorf("error checking permission: %w", err)
 	}
-	fmt.Println("Has permission", exists)
+
 	return exists, nil
 }
 
-func (userRoleRepo *UserRoleRepositoryImp) HasAllRoles(userId int, roles []string) (bool, error) {
-	query := "SELECT EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.name IN (?))"
-	rows, err := userRoleRepo.db.Query(query, userId, roles)
+func (userRoleRepo *UserRoleRepositoryImp) HasAllRoles(userId int, roleNames []string) (bool, error) {
+	if len(roleNames) == 0 {
+		return false, nil
+	}
+
+	placeholders := strings.TrimRight(strings.Repeat("?,", len(roleNames)), ",")
+
+	query := fmt.Sprintf(`
+		SELECT COUNT(DISTINCT r.name) = ?
+		FROM user_roles ur
+		JOIN roles r ON ur.role_id = r.id
+		WHERE ur.user_id = ?
+		AND r.name IN (%s)
+	`, placeholders)
+
+	args := make([]interface{}, 0, len(roleNames)+2)
+
+	args = append(args, len(roleNames))
+	args = append(args, userId)
+
+	for _, roleName := range roleNames {
+		args = append(args, roleName)
+	}
+
+	var hasAll bool
+
+	err := userRoleRepo.db.QueryRow(query, args...).Scan(&hasAll)
 	if err != nil {
 		return false, fmt.Errorf("error executing query: %w", err)
 	}
-	var exists bool
-	for rows.Next() {
-		err := rows.Scan(&exists)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				fmt.Println("No rows found")
-				return false, err
-			}
-			return false, fmt.Errorf("error scanning database: %w", err)
-		}
-	}
-	fmt.Println("Has role", exists)
-	return exists, nil
+
+	fmt.Println("Has all roles:", hasAll)
+
+	return hasAll, nil
 }
 
-func (userRoleRepo *UserRoleRepositoryImp) HasAnyRole(userId int, roles []string) (bool, error) {
-	query := "SELECT EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.name IN (?))"
-	rows, err := userRoleRepo.db.Query(query, userId, roles)
+func (userRoleRepo *UserRoleRepositoryImp) HasAnyRole(userId int, roleNames []string) (bool, error) {
+	if len(roleNames) == 0 {
+		return false, nil
+	}
+
+	placeholders := strings.TrimRight(strings.Repeat("?,", len(roleNames)), ",")
+
+	query := fmt.Sprintf(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM user_roles ur
+			JOIN roles r ON ur.role_id = r.id
+			WHERE ur.user_id = ?
+			AND r.name IN (%s)
+		)
+	`, placeholders)
+
+	args := make([]interface{}, 0, len(roleNames)+1)
+	args = append(args, userId)
+
+	for _, roleName := range roleNames {
+		args = append(args, roleName)
+	}
+
+	var exists bool
+
+	err := userRoleRepo.db.QueryRow(query, args...).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("error executing query: %w", err)
 	}
-	var exists bool
-	for rows.Next() {
-		err := rows.Scan(&exists)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				fmt.Println("No rows found")
-				return false, err
-			}
-			return false, fmt.Errorf("error scanning database: %w", err)
-		}
-	}
-	fmt.Println("Has role", exists)
+
+	fmt.Println("Has any role:", exists)
+
 	return exists, nil
 }
 
-func (userRoleRepo *UserRoleRepositoryImp) AssignRole(userId int, roleId int) error {
+func (userRoleRepo *UserRoleRepositoryImp) AssignRoleToUser(userId int, roleId int) error {
 	query := "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)"
 	_, err := userRoleRepo.db.Exec(query, userId, roleId)
 	if err != nil {
@@ -142,12 +205,26 @@ func (userRoleRepo *UserRoleRepositoryImp) AssignRole(userId int, roleId int) er
 	return nil
 }
 
-func (userRoleRepo *UserRoleRepositoryImp) UnAssignRole(userId int, roleId int) error {
-	query := "DELETE FROM user_roles WHERE user_id = ? AND role_id = ?"
-	_, err := userRoleRepo.db.Exec(query, userId, roleId)
+func (userRoleRepo *UserRoleRepositoryImp) UnAssignRoleFromUser(userId int, roleId int) error {
+	query := `
+		DELETE FROM user_roles
+		WHERE user_id = ?
+		AND role_id = ?
+	`
+
+	result, err := userRoleRepo.db.Exec(query, userId, roleId)
 	if err != nil {
 		return fmt.Errorf("error executing query: %w", err)
 	}
-	fmt.Println("Role unassigned")
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking deleted role: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("role is not assigned to this user")
+	}
+
 	return nil
 }

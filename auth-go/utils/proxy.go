@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -10,10 +9,6 @@ import (
 
 func ProxyToService(targetBaseURL string, pathPrefix string) http.HandlerFunc {
 	targetURL, err := url.Parse(targetBaseURL)
-
-	fmt.Println("Target URL:", targetBaseURL)
-	fmt.Println("Path Prefix:", pathPrefix)
-
 	if err != nil {
 		return func(w http.ResponseWriter, r *http.Request) {
 			WriteJsonErrorResponse(
@@ -27,17 +22,9 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.HandlerFunc {
 
 	proxy := &httputil.ReverseProxy{
 		Rewrite: func(req *httputil.ProxyRequest) {
-
-			// Save the original incoming path
 			incomingPath := req.In.URL.Path
-
-			// Set target URL
 			req.SetURL(targetURL)
-
-			// Remove the gateway prefix from the incoming path
 			remainingPath := strings.TrimPrefix(incomingPath, pathPrefix)
-
-			// If only "/" remains, use target's existing path
 			if remainingPath == "" || remainingPath == "/" {
 				req.Out.URL.Path = targetURL.Path
 			} else {

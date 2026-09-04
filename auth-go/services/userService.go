@@ -6,6 +6,7 @@ import (
 	"auth-go/models"
 	"auth-go/utils"
 	"fmt"
+	"strconv"
 )
 
 type UserService interface {
@@ -69,7 +70,9 @@ func (u *UserServiceImp) LoginUser(payload *dto.LoginUserRequestDTO) (string, er
 	if !isMatch {
 		return "", fmt.Errorf("password does not match")
 	}
-	jwtToken, err := utils.GenerateJWT(userFound.Email, string(userFound.Id))
+	userId := strconv.FormatInt(int64(userFound.Id), 10)
+	fmt.Println("User ID: ", userId)
+	jwtToken, err := utils.GenerateJWT(userFound.Email, userId)
 	if err != nil {
 		return "", err
 	}

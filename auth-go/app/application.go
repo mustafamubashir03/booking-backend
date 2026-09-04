@@ -46,7 +46,9 @@ func (app *Application) Run() error {
 	userRouter := router.NewUserRouter(userController)
 
 	roleDb := dbRepository.NewRoleRepository(db)
-	roleService := services.NewRoleService(roleDb)
+	permissionDb := dbRepository.NewPermissionRepository(db)
+	userRoleDb := dbRepository.NewUserRoleRepository(db)
+	roleService := services.NewRoleService(roleDb, permissionDb, userRoleDb)
 	roleController := controllers.NewRoleController(roleService)
 	roleRouter := router.NewRoleRouter(roleController)
 

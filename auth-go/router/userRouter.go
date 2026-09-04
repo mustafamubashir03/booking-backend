@@ -22,7 +22,7 @@ func NewUserRouter(_userController *controllers.UserController) Router {
 func (userRouter *UserRouter) Register(r chi.Router) {
 	r.With(middlewares.ValidateRequest(&dto.RegisterUserRequestDTO{})).Post("/sign-in", userRouter.userController.CreateUser)
 	r.With(middlewares.ValidateRequest(&dto.LoginUserRequestDTO{})).Post("/login", userRouter.userController.LoginUser)
-	r.With(middlewares.AuthMiddleware).Get("/users", userRouter.userController.GetAllUsers)
-	r.With(middlewares.AuthMiddleware).Get("/user/{id}", userRouter.userController.GetUserById)
-	r.With(middlewares.AuthMiddleware).Delete("/user/{id}", userRouter.userController.DeleteById)
+	r.With(middlewares.AuthMiddleware, middlewares.RequireAllRolesMiddleware("admin")).Get("/users", userRouter.userController.GetAllUsers)
+	r.With(middlewares.AuthMiddleware, middlewares.RequireAnyRoleMiddleware("admin", "user")).Get("/users/{id}", userRouter.userController.GetUserById)
+	r.With(middlewares.AuthMiddleware, middlewares.RequireAllRolesMiddleware("admin")).Delete("/users/{id}", userRouter.userController.DeleteById)
 }
