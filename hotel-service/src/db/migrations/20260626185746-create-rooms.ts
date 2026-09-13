@@ -11,7 +11,7 @@ module.exports = {
         hotelId INT NOT NULL,
         roomCategoryId INT NOT NULL,
         dateOfAvailability DATE NOT NULL,
-        price NUMBER NOT NULL,
+        price DECIMAL(10, 2) NOT NULL,
         createdAt DATE,
         updatedAt DATE,
         deletedAt DATE,

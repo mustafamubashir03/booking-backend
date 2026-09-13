@@ -18,7 +18,7 @@ export const getAllRoomCategoriesByHotelService = async (id: number) => {
     }
     const roomCategories = await roomCategoryRepository.findAllByHotelId(id)
     return roomCategories
-
+ 
 }
 export const createRoomCategoryService = async (roomCategoryData: createRoomCategoryDTO) => {
     const roomCategory = await roomCategoryRepository.create(roomCategoryData)

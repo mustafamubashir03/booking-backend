@@ -24,6 +24,7 @@ class RoomCategory extends Model<InferAttributes<RoomCategory>, InferCreationAtt
     declare hotelId: number;
     declare roomType: RoomType;
     declare roomCount: number;
+    declare price: number;
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
     declare deletedAt: CreationOptional<Date | null>;
@@ -39,6 +40,10 @@ RoomCategory.init(
         hotelId: {
             type: DataTypes.INTEGER,
             allowNull: false,
+        },
+        price: {
+            type: DataTypes.NUMBER,
+            allowNull: false
         },
         roomType: {
             type: DataTypes.ENUM,

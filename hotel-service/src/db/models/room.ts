@@ -41,8 +41,8 @@ Room.init(
             allowNull: false,
         },
         price: {
-            type: DataTypes.NUMBER,
-            allowNull: false
+            type: DataTypes.INTEGER,
+            allowNull: true,
         },
         createdAt: DataTypes.DATE,
         updatedAt: DataTypes.DATE,
