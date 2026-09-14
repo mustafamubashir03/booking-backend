@@ -1,6 +1,7 @@
 import z from "zod";
 import { RoomType } from "../db/models/roomCategory";
-import { RoomGenerationJobSchema } from "../validators/roomGeneration.validator";
+import { roomGenerationJobSchema } from "../validators/roomGeneration.validator";
+
 
 
 export type createRoomCategoryDTO = {
@@ -19,4 +20,4 @@ export type updateRoomCategoryDTO = {
     capacity?: number;
 };
 
-export type RoomGenerationJobDTO = z.infer<typeof RoomGenerationJobSchema>
+export type roomGenerationJobDTO = z.infer<typeof roomGenerationJobSchema>

@@ -59,8 +59,8 @@ Room.init(
     },
     {
         sequelize: sequelize,
-        tableName: 'room',
-        underscored: true,
+        tableName: 'rooms',
+        underscored: false,
         timestamps: true,
     },
 );

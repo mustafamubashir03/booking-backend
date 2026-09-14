@@ -46,7 +46,7 @@ RoomCategory.init(
             allowNull: false
         },
         roomType: {
-            type: DataTypes.ENUM,
+            type: DataTypes.ENUM(...Object.values(RoomType)),
             allowNull: false,
         },
         roomCount: {
@@ -64,7 +64,7 @@ RoomCategory.init(
     {
         sequelize: sequelize,
         tableName: 'roomCategories',
-        underscored: true,
+        underscored: false,
         timestamps: true,
     },
 );

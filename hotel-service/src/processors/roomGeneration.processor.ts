@@ -1,5 +1,5 @@
 import { Job, Worker } from 'bullmq';
-import { RoomGenerationJobDTO } from '../dto/roomCategory.dto';
+import { roomGenerationJobDTO } from '../dto/roomCategory.dto';
 import { ROOM_GENERATION_QUEUE } from '../queues/roomGeneration.queue';
 import { getRedisConnection } from '../config/redis.config';
 import logger from '../config/logger.config';
@@ -8,7 +8,7 @@ import { generateRooms } from '../services/roomGeneration.service';
 
 export const setupRoomGenerationWorker = () => {
 
-    const roomGenerationProcessor = new Worker<RoomGenerationJobDTO>(
+    const roomGenerationProcessor = new Worker<roomGenerationJobDTO>(
         ROOM_GENERATION_QUEUE,
         async (job: Job) => {
             if (job.name !== ROOM_GENERATION_QUEUE) throw new Error('Invalid job name');

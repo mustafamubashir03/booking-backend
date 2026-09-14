@@ -1,6 +1,6 @@
 import z from "zod";
 
-export const RoomGenerationSchema = z.object({
+export const roomGenerationSchema = z.object({
     roomCategoryId: z.number().positive("Room Category ID must be a positive number"),
     startDate: z.string().datetime(),
     endDate: z.string().datetime(),
@@ -10,7 +10,7 @@ export const RoomGenerationSchema = z.object({
 
 })
 
-export const RoomGenerationJobSchema = z.object({
+export const roomGenerationJobSchema = z.object({
     roomCategoryId: z.number().positive(),
     startDate: z.string().datetime(),
     endDate: z.string().datetime(),

@@ -12,6 +12,11 @@ type dbConfig = {
   DB_HOST: string;
 };
 
+type cronConfig = {
+  CRON_SCHEDULE: string;
+  FUTURE_HORIZON_DAYS: number;
+}
+
 function loadEnv() {
   dotenv.config();
   console.log(`Environment variables loaded`);
@@ -30,3 +35,8 @@ export const dbConfig: dbConfig = {
   DB_PASSWORD: process.env.DB_PASSWORD || '',
   DB_HOST: process.env.DB_HOST || '',
 };
+
+export const cronConfig: cronConfig = {
+  CRON_SCHEDULE: process.env.CRON_SCHEDULE || '0 12 * * *',
+  FUTURE_HORIZON_DAYS: Number(process.env.FUTURE_HORIZON_DAYS) || 30,
+}

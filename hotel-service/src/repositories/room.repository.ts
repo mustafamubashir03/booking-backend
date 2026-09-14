@@ -17,6 +17,16 @@ export class RoomRepository extends BaseRepository<Room> {
             }
         })
     }
+
+    async findLatestByRoomCategoryId(roomCategoryId: number) {
+        return await this.model.findOne({
+            where: {
+                roomCategoryId,
+                deletedAt: null
+            },
+            order: [['dateOfAvailability', 'DESC']],
+        });
+    }
     async bulkCreate(rooms: CreationAttributes<Room>[]) {
         return await this.model.bulkCreate(rooms)
     }

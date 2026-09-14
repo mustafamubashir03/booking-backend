@@ -1,7 +1,7 @@
 import { CreationAttributes } from "sequelize";
 import Room from "../db/models/room";
 import RoomCategory from "../db/models/roomCategory";
-import { RoomGenerationJobDTO } from "../dto/roomCategory.dto";
+import { roomGenerationJobDTO } from "../dto/roomCategory.dto";
 import { RoomRepository } from "../repositories/room.repository";
 import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 import { roomCategoryRepository } from "./roomCategory.service";
@@ -10,7 +10,7 @@ import logger from "../config/logger.config";
 
 export const roomRepository = new RoomRepository()
 
-export async function generateRooms(jobData: RoomGenerationJobDTO) {
+export async function generateRooms(jobData: roomGenerationJobDTO) {
     let totalRoomsCreated = 0
     let totalDatesCovered = 0
     const roomCategory = await roomCategoryRepository.findById(jobData.roomCategoryId)
@@ -19,18 +19,15 @@ export async function generateRooms(jobData: RoomGenerationJobDTO) {
     }
     const startDate = new Date(jobData.startDate)
     const endDate = new Date(jobData.endDate)
-    if (startDate.getTime() > endDate.getTime()) {
-        throw new BadRequestError("Start date must be before end date")
+    if (startDate.getTime() >= endDate.getTime()) {
+        throw new BadRequestError("Start date must be strictly less than end date")
     }
     if (startDate.getTime() < new Date().getTime()) {
         throw new BadRequestError("Start date must be in future")
     }
     const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
     logger.info(`Creating rooms for ${totalDays} days`)
-    if (totalDays > jobData.batchSize) {
-        throw new BadRequestError(`Total days should not be greater than batch size of ${jobData.batchSize}`)
-    }
-    const batchSize = jobData.batchSize || 100;
+    const batchSize = jobData.batchSize ?? 100;
     let currentBatchStart = new Date(startDate);
     while (currentBatchStart < endDate) {
         const batchEndDate = new Date(currentBatchStart);
@@ -38,6 +35,7 @@ export async function generateRooms(jobData: RoomGenerationJobDTO) {
         if (batchEndDate > endDate) {
             batchEndDate.setTime(endDate.getTime())
         }
+        logger.info(`Processing batch from ${currentBatchStart} to ${batchEndDate}`)
         const batchResult = await processDateBatch(roomCategory, currentBatchStart, batchEndDate, jobData.priceOverride)
         totalRoomsCreated += batchResult.roomsCreated
         totalDatesCovered += batchResult.datesProcessed
@@ -58,7 +56,7 @@ export async function processDateBatch(roomCategory: RoomCategory, startDate: Da
             room.dateOfAvailability.toISOString().split("T")[0]
         )
     )
-    while (currentDate <= endDate) {
+    while (currentDate < endDate) {
         const dateKey = currentDate.toISOString().split("T")[0];
 
         if (!existingDates.has(dateKey)) {
